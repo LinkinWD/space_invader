@@ -13,16 +13,21 @@ class Game:
         self.shape = obsticle.shape
         self.block_size = 6
         self.blocks = self.blocks = pygame.sprite.Group()
-        self.create_obstacle()
-    def create_obstacle(self):
+        self.obstacle_amount = 4
+        self.obstacle_x_positions = [num * (screen_width / self.obstacle_amount) for num in range(self.obstacle_amount)]
+        self.create_multible_obsticles(*self.obstacle_x_positions,x_start = screen_width / 15, y_start =480)
+    def create_obstacle(self, x_start, y_start, offset_x):
          for row_index, row in enumerate(self.shape):
              for col_index, col in enumerate(row):
                  if col == 'x':
-                    x = col_index * self.block_size
-                    y = row_index * self.block_size
+                    x = x_start + col_index * self.block_size + offset_x
+                    y = y_start + row_index * self.block_size
                     block = obsticle.Block(self.block_size,(241,79,80),x,y)
                     self.blocks.add(block)
 
+    def create_multible_obsticles(self, *offset, x_start, y_start):
+        for offset_x in offset:
+            self.create_obstacle(x_start,y_start,offset_x)
     def run(self):
         self.player.update()
 
