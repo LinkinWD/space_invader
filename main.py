@@ -1,7 +1,9 @@
 import pygame, sys
 from player import  Player
 import obsticle
-from alien import Alien
+from alien import Alien, Extra
+from random import choice,randint
+from laser import Laser
 
 class Game:
     def __init__(self):
@@ -20,7 +22,12 @@ class Game:
         #alien setup
         self.aliens = pygame.sprite.Group()
         self.alien_setup(rows =6, cols=8)
+
         self.alien_direction = 1
+        self.alien_lasers = pygame.sprite.Group()
+        #extra alien
+        self.extra = pygame.sprite.GroupSingle()
+        self.extra_spawn_time = randint(400,800)
 
     def create_obstacle(self, x_start, y_start, offset_x):
          for row_index, row in enumerate(self.shape):
@@ -47,17 +54,79 @@ class Game:
 
                 self.aliens.add(alien_sprite)
 
+    def alien_move_down(self, distance):
+        if self.aliens:
+            for alien in self.aliens.sprites():
+                alien.rect.y += distance
     def alien_position_checker(self):
-        all_aliens
+        all_aliens = self.aliens.sprites()
+        for alien in all_aliens:
+            if alien.rect.right >= screen_width:
+                self.alien_direction = -1
+                self.alien_move_down(2)
+            elif alien.rect.left <= 0:
+                self.alien_direction = 1
+                self.alien_move_down(2)
+
+    def alien_shoot(self):
+        if self.aliens.sprites():
+            random_alien = choice(self.aliens.sprites())
+            laser_sprite = Laser(random_alien.rect.center,6,screen_height)
+            self.alien_lasers.add(laser_sprite)
+
+    def extra_alien_timer(self):
+        self.extra_spawn_time -=1
+        if self.extra_spawn_time <= 0:
+            self.extra.add(Extra(choice(['right', 'left']),screen_width))
+            self.extra_spawn_time = randint(400,800)
+
+    def collision_checks(self):
+        #player lasers
+        if self.player.sprite.lasers:
+            for laser in self.player.sprite.lasers:
+                #obsticle
+                if pygame.sprite.spritecollide(laser, self.blocks, True):
+                    laser.kill()
+                #alien collisions
+                if pygame.sprite.spritecollide(laser, self.aliens, True):
+                    laser.kill()
+                #extra collision
+                if pygame.sprite.spritecollide(laser, self.extra, True):
+                    laser.kill()
+        #alien laser
+        if self.alien_lasers:
+           for laser in self.alien_lasers:
+               #obstacle
+               if pygame.sprite.spritecollide(laser, self.blocks, True):
+                   laser.kill()
+                #player
+               if pygame.sprite.spritecollide(laser, self.player, False):
+                    laser.kill()
+                    print('dead')
+        #aliens
+        if self.aliens:
+            for alien in self.aliens:
+                pygame.sprite.spritecollide(alien, self.blocks, True)
+                if pygame.sprite.spritecollide(alien, self.player, False):
+                    pygame.quit()
+                    sys.exit()
+
     def run(self):
         self.player.update()
         self.aliens.update(self.alien_direction)
+        self.alien_position_checker()
+        self.alien_lasers.update()
+        self.extra_alien_timer()
+        self.extra.update()
+        self.collision_checks()
 
         self.player.sprite.lasers.draw(screen)
         self.player.draw(screen)
 
         self.blocks.draw(screen)
         self.aliens.draw(screen)
+        self.alien_lasers.draw(screen)
+        self.extra.draw(screen)
 
 if __name__ == '__main__':
     screen_width = 600
@@ -66,11 +135,17 @@ if __name__ == '__main__':
     clock = pygame.time.Clock()
     game = Game()
 
+    ALIENLASER = pygame.USEREVENT +1
+    pygame.time.set_timer(ALIENLASER, 800)
+
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
+            if event.type == ALIENLASER:
+                game.alien_shoot()
+
 
         screen.fill((30,30,30))
         game.run()
